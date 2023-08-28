@@ -1,4 +1,7 @@
-﻿using FilmesApi.Models;
+﻿using AutoMapper;
+using FilmesApi.Data;
+using FilmesApi.Data.Dtos;
+using FilmesApi.Models;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FilmesApi.Controllers
@@ -7,29 +10,36 @@ namespace FilmesApi.Controllers
     [Route("[controller]")]
     public class FilmeController : Controller
     {
-        private static List<Filme> filmes = new List<Filme>();
-        private static int id = 0;
+        private FilmeContext _context;
+        private IMapper _mapper;
+
+        public FilmeController(FilmeContext context, IMapper mapper)
+        {
+            _context = context;
+            _mapper = mapper;   
+        }
 
         [HttpPost]
-        public IActionResult AdcionaFilme([FromBody] Filme filme)
+        public IActionResult AdcionaFilme([FromBody] CreateFilmeDto filmeDto)
         {
-            filme.Id = id++;
-            filmes.Add(filme);
-            return CreatedAtAction(nameof(RecuperaFilmePorId), 
-                new {id = filme.Id}, 
-                filme);
+            Filme filme = _mapper.Map<Filme>(filmeDto);
+            _context.Filmes.Add(filme);
+            _context.SaveChanges();
+            return CreatedAtAction(nameof(RecuperaFilmePorId),
+                new { id = filme.Id },
+                filmeDto);
         }
 
         [HttpGet()]
         public IEnumerable<Filme> RecuperarFilmes([FromQuery] int skip = 0, [FromQuery] int take = 50)
         {
-            return filmes.Skip(skip).Take(10);
+            return _context.Filmes.Skip(skip).Take(take);
         }
 
         [HttpGet("{id}")]
         public IActionResult RecuperaFilmePorId(int id)
         {
-            var filme = filmes.FirstOrDefault(filme => filme.Id == id);
+            var filme = _context.Filmes.FirstOrDefault(filme => filme.Id == id);
 
             if (filme == null)
                 return NotFound();
